@@ -1,4 +1,4 @@
-package com.example.beast_academy_apk
+package com.vocabularyquest.app
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
@@ -6,7 +6,7 @@ import android.util.Log
 import android.webkit.JavascriptInterface
 import java.util.Locale
 
-private const val TAG = "VocabularyQuestApp"
+private const val TAG = "VocabQuestApp"
 
 class AndroidSpeechSynthesis(
     context: Context,

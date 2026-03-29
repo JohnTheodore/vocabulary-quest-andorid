@@ -1,4 +1,4 @@
-package com.example.beast_academy_apk.ui.theme
+package com.vocabularyquest.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

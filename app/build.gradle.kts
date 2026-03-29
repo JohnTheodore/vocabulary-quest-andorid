@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.beast_academy_apk"
+    namespace = "com.vocabularyquest.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.beast_academy_apk"
+        applicationId = "com.vocabularyquest.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4"
+        versionCode = 5
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -1,4 +1,4 @@
-package com.example.beast_academy_apk
+package com.vocabularyquest.app
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -51,11 +51,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import com.example.beast_academy_apk.ui.theme.VocabularyQuestTheme
+import com.vocabularyquest.app.ui.theme.VocabQuestTheme
 import kotlinx.coroutines.delay
 
-private const val TAG = "VocabularyQuestApp"
-private const val START_URL = "https://vocab-quest-production.up.railway.app/"
+private const val TAG = "VocabQuestApp"
+private const val START_URL = "https://vocabquest.app/"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,8 +81,8 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            VocabularyQuestTheme {
-                VocabularyQuestWebView(START_URL)
+            VocabQuestTheme {
+                VocabQuestWebView(START_URL)
             }
         }
     }
@@ -99,20 +99,11 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Main WebView component for Vocabulary Quest.
- * 
- * This component includes fixes for:
- * 1. Full-screen media playback crashing: Properly manages the custom view life cycle
- *    by using the activity's content view and ensuring state consistency.
- * 2. Back button handling: Intercepts the back button to either exit full-screen 
- *    or navigate back in WebView history.
- * 3. Audio context suspension: Resumes Web Audio API context on user interaction.
- * 4. Auth persistence: Enables cookies, DOM storage, and database storage with periodic flushing.
- * 5. File Upload support: Implements onShowFileChooser to allow file picking and uploading.
+ * Main WebView component for VocabQuest.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun VocabularyQuestWebView(url: String) {
+fun VocabQuestWebView(url: String) {
     val activity = LocalContext.current as Activity
     val window = activity.window
     var showTtsWarning by remember { mutableStateOf(false) }
