@@ -285,6 +285,8 @@ fun VocabQuestWebView(url: String) {
                         databaseEnabled = true
                         loadWithOverviewMode = true
                         useWideViewPort = true
+                        // RELAX USER GESTURE REQUIREMENT: 
+                        // This allows focus() and media playback without a physical tap.
                         mediaPlaybackRequiresUserGesture = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         allowFileAccess = true
@@ -361,13 +363,25 @@ fun VocabQuestWebView(url: String) {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             canGoBack = view?.canGoBack() ?: false
                             CookieManager.getInstance().flush()
+                            
+                            // EXPLICIT FOCUS:
+                            // 1. Give the WebView container the window focus
+                            view?.requestFocus()
+                            
+                            // 2. Inject JS to find and focus the input field, then trigger soft keyboard
                             view?.evaluateJavascript("""
                                 (function() {
+                                    // Resume audio context if needed
                                     if (window.Howler && Howler.ctx && Howler.ctx.state === 'suspended') {
-                                        const resume = () => Howler.ctx.resume();
-                                        document.addEventListener('touchstart', resume, { once: true });
-                                        document.addEventListener('mousedown', resume, { once: true });
-                                        resume();
+                                        Howler.ctx.resume();
+                                    }
+                                    
+                                    // Find first text/email/search input or textarea
+                                    const input = document.querySelector('input:not([type="hidden"]):not([type="submit"]), textarea, [contenteditable="true"]');
+                                    if (input) {
+                                        input.focus();
+                                        // Optional: some keyboards need a small click event to show up
+                                        input.click();
                                     }
                                 })();
                             """.trimIndent(), null)
