@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -99,6 +100,20 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * Intercept key events to prevent system shortcuts (like Search + H) 
+     * from triggering and taking the user to the home screen.
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // Intercept Meta/Search/Function keys combined with others that are common system shortcuts
+        if (event != null && (event.isMetaPressed || event.isAltPressed || event.isCtrlPressed)) {
+            Log.d(TAG, "Intercepted potential system shortcut: keyCode=$keyCode")
+            // You can optionally return true here to consume the event if it's causing issues,
+            // but usually we want to let the WebView try to handle it first.
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 }
 
 /**
@@ -110,13 +125,32 @@ class PersistentInputWebView(context: android.content.Context) : WebView(context
         return object : InputConnectionWrapper(baseConnection, true) {
             override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
                 if (beforeLength == 1 && afterLength == 0) {
-                    val downEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DEL)
-                    val upEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DEL)
+                    val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL)
+                    val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL)
                     return sendKeyEvent(downEvent) && sendKeyEvent(upEvent)
                 }
                 return super.deleteSurroundingText(beforeLength, afterLength)
             }
         }
+    }
+
+    /**
+     * Overriding dispatchKeyEvent allows us to capture hardware keyboard events 
+     * before the system or the WebView's default handler acts on them.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        if (event != null) {
+            val keyCode = event.keyCode
+            val isMeta = event.isMetaPressed
+            
+            // Specifically block keys that trigger "Home" or "Search" behavior on tablets
+            // when Meta (Cmd/Windows/Search) is held down.
+            if (isMeta && (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_H)) {
+                Log.d(TAG, "Preventing System Home/Search shortcut")
+                return true // Consume the event so it doesn't trigger system action
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 }
 
