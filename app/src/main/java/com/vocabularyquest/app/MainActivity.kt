@@ -101,6 +101,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE) return true
+        return super.dispatchKeyEvent(event)
+    }
+
     /**
      * Intercept key events to prevent system shortcuts (like Search + H) 
      * from triggering and taking the user to the home screen.
@@ -138,17 +143,15 @@ class PersistentInputWebView(context: android.content.Context) : WebView(context
      * Overriding dispatchKeyEvent allows us to capture hardware keyboard events 
      * before the system or the WebView's default handler acts on them.
      */
-    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
-        if (event != null) {
-            val keyCode = event.keyCode
-            val isMeta = event.isMetaPressed
-            
-            // Specifically block keys that trigger "Home" or "Search" behavior on tablets
-            // when Meta (Cmd/Windows/Search) is held down.
-            if (isMeta && (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_H)) {
-                Log.d(TAG, "Preventing System Home/Search shortcut")
-                return true // Consume the event so it doesn't trigger system action
-            }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        val isMeta = event.isMetaPressed
+        
+        // Specifically block keys that trigger "Home" or "Search" behavior on tablets
+        // when Meta (Cmd/Windows/Search) is held down.
+        if (isMeta && (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_H)) {
+            Log.d(TAG, "Preventing System Home/Search shortcut")
+            return true // Consume the event so it doesn't trigger system action
         }
         return super.dispatchKeyEvent(event)
     }
