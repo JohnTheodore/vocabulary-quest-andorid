@@ -101,28 +101,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE) return true
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {                                                                                                                                        
+        if (event.keyCode == KeyEvent.KEYCODE_ESCAPE) return true                                                                                                                                      
         return super.dispatchKeyEvent(event)
     }
 
-    /**
-     * Intercept key events to prevent system shortcuts (like Search + H) 
-     * from triggering and taking the user to the home screen.
-     */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // Intercept Meta/Search/Function keys combined with others that are common system shortcuts
         if (event != null && (event.isMetaPressed || event.isAltPressed || event.isCtrlPressed)) {
             Log.d(TAG, "Intercepted potential system shortcut: keyCode=$keyCode")
-            // You can optionally return true here to consume the event if it's causing issues,
-            // but usually we want to let the WebView try to handle it first.
         }
         return super.onKeyDown(keyCode, event)
     }
 }
 
 /**
- * Custom WebView to handle persistent backspace issues on some Android keyboards.
+ * Custom WebView to handle persistent backspace issues and lockdown interactions.
  */
 class PersistentInputWebView(context: android.content.Context) : WebView(context) {
     override fun onCreateInputConnection(outAttrs: EditorInfo?): InputConnection? {
@@ -139,27 +132,18 @@ class PersistentInputWebView(context: android.content.Context) : WebView(context
         }
     }
 
-    /**
-     * Overriding dispatchKeyEvent allows us to capture hardware keyboard events 
-     * before the system or the WebView's default handler acts on them.
-     */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
         val isMeta = event.isMetaPressed
         
-        // Specifically block keys that trigger "Home" or "Search" behavior on tablets
-        // when Meta (Cmd/Windows/Search) is held down.
         if (isMeta && (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_H)) {
             Log.d(TAG, "Preventing System Home/Search shortcut")
-            return true // Consume the event so it doesn't trigger system action
+            return true 
         }
         return super.dispatchKeyEvent(event)
     }
 }
 
-/**
- * Main WebView component for VocabQuest.
- */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun VocabQuestWebView(url: String) {
@@ -167,11 +151,8 @@ fun VocabQuestWebView(url: String) {
     val window = activity.window
     var showTtsWarning by remember { mutableStateOf(false) }
     
-    // State to track full-screen (CustomView) mode
     var customView: View? by remember { mutableStateOf(null) }
     var customViewCallback: WebChromeClient.CustomViewCallback? by remember { mutableStateOf(null) }
-
-    // State for File Chooser
     var filePathCallbackState by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
     
     val fileChooserLauncher = rememberLauncherForActivityResult(
@@ -207,7 +188,6 @@ fun VocabQuestWebView(url: String) {
     DisposableEffect(Unit) {
         onDispose { 
             speechBridge.shutdown() 
-            // Flush cookies on dispose
             CookieManager.getInstance().flush()
         }
     }
@@ -221,6 +201,34 @@ fun VocabQuestWebView(url: String) {
 
     var webView: WebView? by remember { mutableStateOf(null) }
     var canGoBack by remember { mutableStateOf(false) }
+
+    val interactionLockdownScript = """
+        (function() {
+          // Lockdown Zoom
+          var meta = document.createElement('meta');
+          meta.name = 'viewport';
+          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+          document.getElementsByTagName('head')[0].appendChild(meta);
+
+          // Lockdown Text Selection and Context Menus
+          var style = document.createElement('style');
+          style.innerHTML = 'body, * { -webkit-user-select: none !important; -webkit-touch-callout: none !important; -webkit-tap-highlight-color: transparent !important; } input, textarea { -webkit-user-select: text !important; }';
+          document.getElementsByTagName('head')[0].appendChild(style);
+
+          // Prevent right-click/context menu
+          window.oncontextmenu = function(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              return false;
+          };
+
+          // Prevent text selection start
+          window.addEventListener('selectstart', function(e) { e.preventDefault(); }, false);
+          
+          // Secondary defense against long-press context menu
+          window.addEventListener('contextmenu', function(e) { e.preventDefault(); }, false);
+        })();
+    """.trimIndent()
 
     val speechPolyfill = """
         (function() {
@@ -301,8 +309,11 @@ fun VocabQuestWebView(url: String) {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    // Disable hardware acceleration for the WebView layer to fix input/rendering bugs
                     setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                    
+                    // Interaction Lockdown: Native Layer
+                    isLongClickable = false
+                    isHapticFeedbackEnabled = false
                     
                     isFocusable = true
                     isFocusableInTouchMode = true
@@ -316,23 +327,26 @@ fun VocabQuestWebView(url: String) {
                     addJavascriptInterface(speechBridge, "AndroidSpeech")
 
                     settings.apply {
-                        // Use default mobile User Agent to allow the website to use mobile input logic
                         javaScriptEnabled = true
                         domStorageEnabled = true
                         databaseEnabled = true
                         loadWithOverviewMode = true
                         useWideViewPort = true
-                        // RELAX USER GESTURE REQUIREMENT: 
-                        // This allows focus() and media playback without a physical tap.
                         mediaPlaybackRequiresUserGesture = false
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         allowFileAccess = true
                         allowContentAccess = true
                         javaScriptCanOpenWindowsAutomatically = true
+                        
+                        // Interaction Lockdown: Settings Layer
+                        setSupportZoom(false)
+                        builtInZoomControls = false
+                        displayZoomControls = false
                     }
 
                     if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
                         WebViewCompat.addDocumentStartJavaScript(this, speechPolyfill, setOf("*"))
+                        WebViewCompat.addDocumentStartJavaScript(this, interactionLockdownScript, setOf("*"))
                     }
                     
                     webChromeClient = object : WebChromeClient() {
@@ -401,23 +415,20 @@ fun VocabQuestWebView(url: String) {
                             canGoBack = view?.canGoBack() ?: false
                             CookieManager.getInstance().flush()
                             
-                            // EXPLICIT FOCUS:
-                            // 1. Give the WebView container the window focus
                             view?.requestFocus()
                             
-                            // 2. Inject JS to find and focus the input field, then trigger soft keyboard
+                            // Lockdown: Force scripts again on finish to be sure
+                            view?.evaluateJavascript(interactionLockdownScript, null)
+                            
                             view?.evaluateJavascript("""
                                 (function() {
-                                    // Resume audio context if needed
                                     if (window.Howler && Howler.ctx && Howler.ctx.state === 'suspended') {
                                         Howler.ctx.resume();
                                     }
                                     
-                                    // Find first text/email/search input or textarea
                                     const input = document.querySelector('input:not([type="hidden"]):not([type="submit"]), textarea, [contenteditable="true"]');
                                     if (input) {
                                         input.focus();
-                                        // Optional: some keyboards need a small click event to show up
                                         input.click();
                                     }
                                 })();
