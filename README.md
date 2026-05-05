@@ -1,6 +1,6 @@
 # Vocabulary Quest Android Wrapper
 
-![Version](https://img.shields.io/badge/version-0.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.4-blue.svg)
 
 A streamlined Android application that provides a native container for the Vocabulary Quest online learning platform.
 
@@ -15,20 +15,21 @@ A streamlined Android application that provides a native container for the Vocab
 
 This project is a WebView-based Android application designed to provide a seamless experience for Vocabulary Quest users on Android devices.
 
-## Current Version: 0.2
-* Initial release of the Vocabulary Quest Android wrapper.
-* Implementation of the native Speech Synthesis bridge.
+## Current Version: 0.9.4
+* Interaction lockdown: Disabled pinch-zoom, long-press selection, and context menus.
+* Updated main URL to `evidencebasedvocabulary.com`.
+* Native Speech Synthesis bridge implementation.
 * Custom adaptive launcher icon and splash screen.
-* Refactored and cleaned up codebase.
 * Full-screen (Edge-to-Edge) implementation.
+* Configuration change fixes for external keyboards.
 
 ## Key Features
 
 *   **Native Speech Synthesis Bridge:** Implements a custom `AndroidSpeechSynthesis` bridge that polyfills the web `speechSynthesis` API using native Android TTS, ensuring that lesson narrations work reliably.
 *   **Audio Context Management:** Includes specialized logic to handle and resume `Howler.js` and Web Audio contexts, bypassing standard browser restrictions on autoplay audio.
-*   **Desktop Experience:** Uses a custom Desktop User Agent to ensure the full Vocabulary Quest web interface is rendered correctly on tablet devices.
+*   **Immersive Learning:** Interaction lockdowns prevent accidental zooming or text selection during gameplay.
 *   **Modern Android UI:** Built with **Jetpack Compose** and **Material 3**, featuring full **Edge-to-Edge** support for an immersive learning environment.
-*   **Performance Optimized:** Utilizes hardware acceleration and advanced WebView features like `DOCUMENT_START_SCRIPT` for early polyfill injection.
+*   **Performance Optimized:** Utilizes software rendering for the WebView to ensure consistent input focus and backspace behavior.
 
 ## Project Structure
 

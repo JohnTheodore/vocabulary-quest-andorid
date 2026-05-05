@@ -59,7 +59,7 @@ import com.vocabularyquest.app.ui.theme.VocabQuestTheme
 import kotlinx.coroutines.delay
 
 private const val TAG = "VocabQuestApp"
-private const val START_URL = "https://vocabquest.app/"
+private const val START_URL = "https://evidencebasedvocabulary.com/"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -423,7 +423,10 @@ fun VocabQuestWebView(url: String) {
                             view?.evaluateJavascript("""
                                 (function() {
                                     if (window.Howler && Howler.ctx && Howler.ctx.state === 'suspended') {
-                                        Howler.ctx.resume();
+                                        const resume = () => Howler.ctx.resume();
+                                        document.addEventListener('touchstart', resume, { once: true });
+                                        document.addEventListener('mousedown', resume, { once: true });
+                                        resume();
                                     }
                                     
                                     const input = document.querySelector('input:not([type="hidden"]):not([type="submit"]), textarea, [contenteditable="true"]');
