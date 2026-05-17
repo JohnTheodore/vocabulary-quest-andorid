@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
@@ -47,12 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vocabularyquest.app.ui.theme.VocabQuestTheme
@@ -64,7 +68,15 @@ private const val START_URL = "https://evidencebasedvocabulary.com/"
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // Keep the screen on while this Activity is foregrounded. Kiosk
+        // learning sessions where the kid pauses for >screen-timeout would
+        // otherwise auto-lock, paint the WebView's network stack into a
+        // power-save state, and freeze mid-session — observed as
+        // exercise-transition-stalled in Sentry for student_mabel on
+        // 2026-05-14 and 2026-05-17.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         // Ensure volume is up for media playback
         (getSystemService(AUDIO_SERVICE) as? AudioManager)?.let { audioManager ->
             if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
@@ -192,6 +204,31 @@ fun VocabQuestWebView(url: String) {
         }
     }
 
+    // Forward Activity lifecycle to the WebView so JS timers and the
+    // renderer process suspend/resume in lockstep with the Activity. Without
+    // this, the WebView's behavior on pause is implementation-defined (some
+    // Android versions throttle, some don't), which is how mabel's 17.7s
+    // mid-session stall went undetected at the Android layer.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var webView: WebView? by remember { mutableStateOf(null) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    webView?.onPause()
+                    webView?.pauseTimers()
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    webView?.onResume()
+                    webView?.resumeTimers()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     if (showTtsWarning) {
         LaunchedEffect(Unit) {
             delay(8000L)
@@ -199,7 +236,6 @@ fun VocabQuestWebView(url: String) {
         }
     }
 
-    var webView: WebView? by remember { mutableStateOf(null) }
     var canGoBack by remember { mutableStateOf(false) }
 
     val interactionLockdownScript = """

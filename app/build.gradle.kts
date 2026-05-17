@@ -11,8 +11,8 @@ android {
         applicationId = "com.vocabularyquest.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.9.4"
+        versionCode = 15
+        versionName = "0.9.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
